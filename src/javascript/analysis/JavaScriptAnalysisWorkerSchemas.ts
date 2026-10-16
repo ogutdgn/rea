@@ -420,6 +420,7 @@ const resourceLimit = z.enum([
   "primitive-bytes",
   "expression-depth",
   "getter-expansion",
+  "event-receiver-expansion",
 ]);
 const primitive = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const property: z.ZodType<JavaScriptSemanticProperty> = z.lazy(() =>

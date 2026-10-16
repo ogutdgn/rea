@@ -10,7 +10,10 @@ import {
   addSemanticGraphRelation,
   addSemanticGraphUnknown,
 } from "./JavaScriptSemanticGraphConstruction.js";
-import { unknownSemanticEvidence } from "./JavaScriptSemanticGraphEvidence.js";
+import {
+  inferredSemanticEvidenceAt,
+  unknownSemanticEvidence,
+} from "./JavaScriptSemanticGraphEvidence.js";
 import type { SemanticFlowProjectionContext } from "./JavaScriptSemanticGraphFlowProjection.js";
 
 /** Project literal EventEmitter registrations, removals, and dispatches. */
@@ -28,11 +31,28 @@ export const projectSemanticEvents = (
     if (event === null) continue;
     eventNodes.set(eventKey, event);
     const relation = eventRelation(operation);
+    const receiverEvidence =
+      operation.receiverCallLocation === undefined
+        ? {}
+        : {
+            evidence: inferredSemanticEvidenceAt(
+              context.file,
+              operation.receiverCallLocation,
+            ),
+            properties: {
+              receiver_binding_id: operation.emitterBindingId,
+              event_source_range: {
+                start: { ...operation.location.start },
+                end: { ...operation.location.end },
+              },
+            },
+          };
     if (operation.kind === "dispatch")
       addSemanticGraphRelation(context.state, {
         source: eventEmitterNode(context, operation),
         target: event,
         relation,
+        ...receiverEvidence,
         resolution:
           operation.resolution === "complete" ? "resolved" : "candidate",
       });
@@ -42,6 +62,7 @@ export const projectSemanticEvents = (
         source: event,
         target: listener,
         relation,
+        ...receiverEvidence,
         resolution:
           operation.resolution === "complete" ? "resolved" : "candidate",
       });

@@ -5,6 +5,7 @@ import type {
   JavaScriptSemanticEventOperation,
   JavaScriptSemanticTimerOperation,
 } from "./javascriptSemanticIr.js";
+import { resolveSemanticEventReceivers } from "./javascriptSemanticEventReceivers.js";
 import { createSemanticCallableIdStack } from "./javascriptSemanticCallableStack.js";
 import { semanticStaticPropertyName } from "./javascriptAstValues.js";
 import {
@@ -95,9 +96,14 @@ export const collectJavaScriptSemanticAsyncEffects = (
   program: t.Program,
   state: JavaScriptSemanticAnalysisState,
   callables: readonly JavaScriptSemanticCallable[],
+  parserPartial = false,
 ): AsyncEffectAnalysis => {
   const events: JavaScriptSemanticEventOperation[] = [];
   const timers: TimerCandidate[] = [];
+  const eventSites = new Map<
+    t.CallExpression | t.OptionalCallExpression,
+    JavaScriptSemanticEventOperation
+  >();
   const callableIds = new Set(callables.map(({ callableId }) => callableId));
   const callableStack = createSemanticCallableIdStack(callableIds);
   const ancestors: t.Node[] = [];
@@ -106,7 +112,15 @@ export const collectJavaScriptSemanticAsyncEffects = (
       callableStack.enter(node, parent);
       if (t.isCallExpression(node) || t.isOptionalCallExpression(node)) {
         const ownerCallableId = callableStack.callables.at(-1) ?? null;
-        collectEvent(node, ownerCallableId, state, events);
+        const event = collectEvent(node, ownerCallableId, state);
+        if (event !== null) {
+          events.push(event);
+          if (
+            t.isMemberExpression(node.callee) &&
+            t.isThisExpression(node.callee.object)
+          )
+            eventSites.set(node, event);
+        }
         collectTimer({
           node,
           ownerCallableId,
@@ -123,7 +137,9 @@ export const collectJavaScriptSemanticAsyncEffects = (
     },
   });
   return {
-    eventOperations: events,
+    eventOperations: parserPartial
+      ? events
+      : resolveSemanticEventReceivers(state, events, eventSites, EVENT_METHODS),
     timerOperations: resolveTimers(timers),
   };
 };
@@ -132,16 +148,15 @@ const collectEvent = (
   node: t.CallExpression | t.OptionalCallExpression,
   ownerCallableId: string | null,
   state: JavaScriptSemanticAnalysisState,
-  output: JavaScriptSemanticEventOperation[],
-): void => {
+): JavaScriptSemanticEventOperation | null => {
   const member = dataEffectMemberCallee(node);
-  if (member === null) return;
+  if (member === null) return null;
   const method = EVENT_METHODS.find(
     (candidate) =>
       candidate ===
       semanticStaticPropertyName(member.property, member.computed),
   );
-  if (method === undefined) return;
+  if (method === undefined) return null;
   const kind = eventKind(method);
   const eventArgument = node.arguments[0];
   const listenerArgument = EVENT_LISTENER_METHODS.includes(method)
@@ -149,7 +164,7 @@ const collectEvent = (
     : undefined;
   const emitter = emitterIdentity(member.object, state);
   const eventName = dataEffectLiteralString(eventArgument);
-  output.push({
+  return {
     eventId: `event:${kind}:${String(node.start ?? -1)}:${String(node.end ?? -1)}`,
     kind,
     method,
@@ -168,7 +183,7 @@ const collectEvent = (
         : emitter.complete
           ? "complete"
           : "partial",
-  });
+  };
 };
 
 const eventKind = (
@@ -203,8 +218,9 @@ const emitterIdentity = (
       complete: !semanticResolutionBlocked(state, node, node.name),
     };
   }
-  if (t.isThisExpression(node))
-    return { key: "this", bindingId: null, complete: true };
+  // `this` is not one object across calls, instances, or static members.
+  // Keep its source occurrence partial like other unproven expressions;
+  // a lexical class/function owner does not establish runtime identity.
   return {
     key: `expression:${String(node.start ?? -1)}:${String(node.end ?? -1)}`,
     bindingId: null,

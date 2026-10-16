@@ -58,6 +58,7 @@ export function* collectJavaScriptDerivedSemanticsSteps(
     program,
     state,
     callables,
+    parserPartial,
   );
   yield;
   const childProcesses = collectJavaScriptSemanticChildProcesses(

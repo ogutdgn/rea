@@ -12,6 +12,9 @@ export const SEMANTIC_GETTER_EXPANSION_LIMIT = 512;
 /** Bound normalized strings and transient keys independently of transport limits. */
 export const SEMANTIC_PRIMITIVE_JSON_BYTES_LIMIT = 1_048_576;
 
+/** Bound receiver-by-method expansion before allocating contextual events. */
+export const SEMANTIC_EVENT_RECEIVER_EXPANSION_LIMIT = 512;
+
 const RESOURCE_LIMIT_REASON: Record<JavaScriptSemanticResourceLimit, string> = {
   "primitive-candidates":
     "Primitive candidate budget exceeded (maximum 256 alternatives).",
@@ -19,6 +22,8 @@ const RESOURCE_LIMIT_REASON: Record<JavaScriptSemanticResourceLimit, string> = {
     "Primitive string-byte budget exceeded (maximum 1048576 estimated JSON bytes).",
   "expression-depth":
     "Semantic expression depth budget exceeded (maximum 256 nested expressions).",
+  "event-receiver-expansion":
+    "Event receiver expansion was conservatively bounded (maximum 512 contextual operations).",
   "getter-expansion":
     "Getter expansion was conservatively bounded (maximum 512 distinct states or a growing receiver cycle).",
 };

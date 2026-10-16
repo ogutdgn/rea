@@ -2,6 +2,7 @@ import type { JavaScriptSemanticResourceLimit } from "./javascriptSemanticValueT
 import type { ApplicationCoverage } from "./javascriptApplicationEvidenceSchemas.js";
 import {
   SEMANTIC_EXPRESSION_DEPTH_LIMIT,
+  SEMANTIC_EVENT_RECEIVER_EXPANSION_LIMIT,
   SEMANTIC_GETTER_EXPANSION_LIMIT,
   SEMANTIC_PRIMITIVE_CANDIDATE_LIMIT,
   SEMANTIC_PRIMITIVE_JSON_BYTES_LIMIT,
@@ -62,6 +63,10 @@ const semanticResourceBounds: Record<
   "expression-depth": {
     value: SEMANTIC_EXPRESSION_DEPTH_LIMIT,
     unit: "depth",
+  },
+  "event-receiver-expansion": {
+    value: SEMANTIC_EVENT_RECEIVER_EXPANSION_LIMIT,
+    unit: "items",
   },
   "getter-expansion": {
     value: SEMANTIC_GETTER_EXPANSION_LIMIT,

@@ -223,6 +223,8 @@ export interface JavaScriptSemanticFunctionFingerprint {
 
 /** One EventEmitter-style registration, removal, or dispatch candidate. */
 export interface JavaScriptSemanticEventOperation {
+  /** Direct local call proving this observation's receiver; not proof of execution. */
+  readonly receiverCallLocation?: JavaScriptSourceRange;
   readonly eventId: string;
   readonly kind: "register" | "remove" | "dispatch";
   readonly method:

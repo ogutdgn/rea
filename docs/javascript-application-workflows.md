@@ -273,6 +273,37 @@ change hashed event IDs and longer event/listener labels; query the preserved
 name or select IDs from the parent graph. Previously stored graphs keep their
 original IDs and remain valid trace inputs.
 
+`this` source occurrences retain separate partial event candidates and explicit
+unknowns: class or function ownership alone does not establish runtime object
+identity. Separate occurrence keys neither prove different objects nor rule out
+a shared receiver.
+
+REA additionally resolves direct calls on closed module-local instances:
+`const a = new Bus(); a.listen(); a.send();` can connect the two methods' `this`
+events through `a`, while `b.send()` on a distinct instance stays separate.
+The supported class directly extends an unmodified imported Node `EventEmitter`,
+uses its default constructor, and has ordinary zero-argument instance methods
+containing only direct `this` event calls. Event arguments must be literals or
+empty callbacks. Calls must be direct module-level statements on stable `const`
+instances. This bounded subset avoids claiming receiver identity through custom
+constructors, inheritance, fields, decorators, arbitrary callbacks, or rebinding.
+
+All references to the class and its instances must remain within that subset.
+Escapes, aliases, extracted/replaced methods, prototype writes, nested/conditional
+calls, dynamic scope, and recovered parser errors prevent specialization. An
+escaped instance also invalidates its peers because it exposes their shared
+prototype. Source-level unknowns remain available for unsupported invocations;
+resolved call-specific observations do not prove that a path executed. Their
+relation Evidence points to the direct call, while `event_source_range` retains
+the event expression inside the method. Repeated calls to the same method on one
+object share an observation, supported by the first admitted call.
+
+Expansion retains at most 512 contextual event operations per source file and
+reports partial coverage plus an event resource-limit unknown if this bound is
+reached. Unexpanded source observations remain available. Stable named-binding
+event behavior is unchanged. New analyses change `this` event IDs; select IDs
+from the current parent graph rather than reusing IDs from earlier analyses.
+
 ## Version comparison
 
 REA pairs entities only when a tier produces one unique candidate on each side.

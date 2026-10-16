@@ -565,15 +565,19 @@ function* projectFileSteps(
 const projectFileResourceLimits = (
   context: Pick<FileContext, "file" | "ir" | "state" | "moduleNode">,
 ): void => {
-  // Getter limits describe query effects without tagged values; other limits
+  // Query/receiver limits have no tagged values; other limits
   // already project from binding or return-site values and must not be duplicated.
   for (const limit of semanticCoverageResourceLimits(context.ir.coverage)) {
-    if (limit !== "getter-expansion") continue;
+    if (limit !== "getter-expansion" && limit !== "event-receiver-expansion")
+      continue;
     const unknown = createJavaScriptSemanticGraphUnknown(
       {
         node_id: context.moduleNode.node_id,
-        family: "data-flow",
-        relation_kinds: ["defines"],
+        family: limit === "event-receiver-expansion" ? "event" : "data-flow",
+        relation_kinds:
+          limit === "event-receiver-expansion"
+            ? ["registers-listener", "dispatches-candidate", "removes-listener"]
+            : ["defines"],
         reason: "resource-limit",
         detail: semanticResourceLimitReason(limit),
         candidate_node_ids: [],
